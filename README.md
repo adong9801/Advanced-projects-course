@@ -2,7 +2,7 @@
 
 A Minecraft pathfinder for my course project: Rust finds the route, and Java walks the player along it.
 
-- Final video: (link coming)
+- Final video: https://www.youtube.com/watch?v=QDvjQnDj4-g
 - Documentation: [Rust Pathfinder Project Documentation](https://docs.google.com/document/d/1zqXj8fdr9FvEjBLE7OsOSS8yZYWv2avIebudq20dNKg/edit)
 - Earlier demo (November 2): https://youtu.be/0yST2iTAc5M
 
