@@ -1,0 +1,15 @@
+[package]
+name = "rust_pathfinder"
+version = "0.2.0"
+edition = "2021"
+publish = false
+
+# No dependencies: the JNI surface is two calls, bound by hand in src/jni.rs.
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

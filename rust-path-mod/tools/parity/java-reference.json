@@ -1,0 +1,28 @@
+{
+  "V5Flags.java": {
+    "source": "V5Flags.java from my Java pathfinder mod",
+    "sha256": "eb9c70edc78f89d5cbd73e3bd7c98530d5ea072eebde01f7a035d41cfbd135e0"
+  },
+  "V5World.java": {
+    "source": "V5World.java from my Java pathfinder mod",
+    "sha256": "119a939a176190551b5e8e2c116f0424866c3db8e104f011c399a2113c16f816"
+  },
+  "V5PathWalker.java": {
+    "source": "V5PathWalker.java from my Java pathfinder mod",
+    "sha256": "e144dd9f7d3fd3e43b68ec38f25ccecab37b8e99019494447f8d5f3fd38a2f96"
+  },
+  "V5PathRotation.java": {
+    "source": "V5PathRotation.java from my Java pathfinder mod",
+    "sha256": "5508e081c77a75dc9b39f4bfee452c8cfaee560dbc7adbc22a8fcf091b4fe476"
+  },
+  "Approach.java": {
+    "source": "Approach.java from my Java pathfinder mod",
+    "sha256": "2cd6e3f740141532938b56ad45b26cb547856a87bf849adebd6777eca70c5798"
+  },
+  "V5Search.java": {
+    "source": "V5Search.java from my Java pathfinder mod",
+    "sha256": "343afad9a938b718d998dd57d9f7b1dcca73472c08f5f66ee234da1327b66d81",
+    "test_only": true,
+    "adaptations": "Package/imports and stand-in coordinate/map/world types only; search body unchanged."
+  }
+}

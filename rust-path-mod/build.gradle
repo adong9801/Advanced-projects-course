@@ -1,0 +1,165 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'maven-publish'
+}
+
+repositories {
+	// Add repositories to retrieve artifacts from in here.
+	// You should only use this when depending on other mods because
+	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
+	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
+	// for more information about repositories.
+}
+
+loom {
+	splitEnvironmentSourceSets()
+
+	mods {
+		"rust-path-mod" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+}
+
+dependencies {
+	// To change the versions see the gradle.properties file
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	// Fabric API. This is technically optional, but you probably want it anyway.
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+}
+
+java {
+	toolchain.languageVersion = JavaLanguageVersion.of(25)
+	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
+	// if it is present.
+	// If you remove this line, sources will not be generated.
+	withSourcesJar()
+
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+// Compile and bundle the Rust engine for the build machine's OS and architecture.
+// Cargo output is kept under build/, so Gradle clean also cleans native output.
+def nativeOsName = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+def nativePlatform = nativeOsName.contains('mac') ? 'macos' : nativeOsName.contains('win') ? 'windows' : 'linux'
+def nativeArchName = System.getProperty('os.arch').toLowerCase(Locale.ROOT)
+def nativeArch = nativeArchName in ['arm64', 'aarch64'] ? 'aarch64' : nativeArchName in ['amd64', 'x86_64'] ? 'x86_64' : nativeArchName
+def nativeLibrary = System.mapLibraryName('rust_pathfinder')
+def cargoOutput = layout.buildDirectory.dir('rust')
+def nativeResources = layout.buildDirectory.dir('generated/nativeResources')
+
+tasks.register('buildNativePathfinder', Exec) {
+	group = 'build'
+	description = 'Build the Rust pathfinder in release mode for this machine.'
+	workingDir 'native/pathfinder'
+	commandLine 'cargo', 'build', '--release', '--locked'
+	environment 'CARGO_TARGET_DIR', cargoOutput.get().asFile.absolutePath
+	inputs.files(fileTree('native/pathfinder') { include 'src/**', 'Cargo.toml', 'Cargo.lock' })
+	outputs.file(cargoOutput.map { it.file("release/${nativeLibrary}") })
+}
+
+tasks.register('bundleNativePathfinder', Sync) {
+	dependsOn 'buildNativePathfinder'
+	from(cargoOutput.map { it.file("release/${nativeLibrary}") })
+	into(nativeResources.map { it.dir("natives/${nativePlatform}-${nativeArch}") })
+}
+
+sourceSets.client.resources.srcDir(nativeResources)
+tasks.named('processClientResources') { dependsOn 'bundleNativePathfinder' }
+tasks.named('sourcesJar') { dependsOn 'bundleNativePathfinder' }
+
+tasks.register('testNativePathfinder', Exec) {
+	group = 'verification'
+	description = 'Run the Rust movement and search regression tests.'
+	dependsOn 'buildNativePathfinder'
+	workingDir 'native/pathfinder'
+	commandLine 'cargo', 'test', '--release', '--locked'
+	environment 'CARGO_TARGET_DIR', cargoOutput.get().asFile.absolutePath
+}
+
+sourceSets {
+	nativeTest {
+		java.srcDir 'src/nativeTest/java'
+		compileClasspath += sourceSets.client.output
+		runtimeClasspath += sourceSets.client.output
+	}
+}
+
+tasks.register('nativeSmokeTest', JavaExec) {
+	group = 'verification'
+	description = 'Load the bundled engine through JNI and check real Java-to-Rust searches.'
+	dependsOn 'nativeTestClasses', 'processClientResources'
+	classpath = sourceSets.nativeTest.runtimeClasspath
+	mainClass = 'com.rustpath.client.pathfinder.NativeBridgeTest'
+	javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+	jvmArgs '--enable-native-access=ALL-UNNAMED'
+}
+
+tasks.named('check') { dependsOn 'testNativePathfinder', 'nativeSmokeTest' }
+
+jar {
+	def projectName = project.name
+	inputs.property "projectName", projectName
+
+	from("LICENSE") {
+		rename { "${it}_$projectName"}
+	}
+}
+
+// configure the maven publication
+publishing {
+	publications {
+		create("mavenJava", MavenPublication) {
+			from components.java
+		}
+	}
+
+	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
+	repositories {
+		// Add repositories to publish to here.
+		// Notice: This block does NOT have the same function as the block in the top level.
+		// The repositories here will be used for publishing your artifact, not for
+		// retrieving dependencies.
+	}
+}
+
+// The frozen Java search is test-only; it is never shipped as a fallback.
+tasks.register('v5ParityTest', JavaExec) {
+    group = 'verification'
+    dependsOn 'nativeTestClasses', 'processClientResources'
+    classpath = sourceSets.nativeTest.runtimeClasspath
+    mainClass = 'com.rustpath.client.pathfinder.V5ParityTest'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    jvmArgs '--enable-native-access=ALL-UNNAMED'
+}
+tasks.named('check') { dependsOn 'v5ParityTest' }
+
+// Optional real-client movement tests; not part of the ordinary headless build.
+fabricApi {
+    configureTests {
+        createSourceSet = true
+        modId = 'rust-path-mod-gametest'
+        enableGameTests = false
+        enableClientGameTests = true
+    }
+}
+sourceSets.gametest.compileClasspath += sourceSets.client.output
+sourceSets.gametest.runtimeClasspath += sourceSets.client.output
+tasks.named('runClientGameTest') { dependsOn 'processClientResources' }

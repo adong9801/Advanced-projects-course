@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "rust-path-mod",
+  "version": "${version}",
+  "name": "Rust Pathfinder",
+  "description": "Standalone Rust V5 path search with a Java walking, jumping and drop controller. /pathfind previews; /pathfind walk follows.",
+  "authors": [
+    "Alex"
+  ],
+  "license": "GPL-3.0-only",
+  "icon": "assets/rust-path-mod/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.rustpath.client.RustPathModClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~26.1.2",
+    "java": ">=25",
+    "fabric-api": ">=0.155.3"
+  }
+}

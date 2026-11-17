@@ -1,0 +1,1 @@
+{"schemaVersion":1,"id":"rust-path-mod-gametest","version":"1.0.0","name":"Rust Pathfinder movement tests","environment":"client","entrypoints":{"fabric-client-gametest":["com.rustpath.test.WalkingGameTest"]},"depends":{"rust-path-mod":"*"}}
